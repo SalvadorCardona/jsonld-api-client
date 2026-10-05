@@ -1,6 +1,6 @@
 {
   "name": "jsonld-api-client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Typed client for JSON-LD / Hydra APIs: openapi-fetch with auth and scope headers, an IRI cache, and Mercure subscriptions.",
   "keywords": [
     "json-ld",
