@@ -31,13 +31,26 @@ export interface ClientConfigInterface {
 
   /** Path of the Mercure hub, appended to `baseUrl`. */
   mercurePath: string
+
+  /**
+   * Version of the Mercure protocol spoken by the hub.
+   *
+   * - `"1.0"` (default, hubs v1.0+, FrankenPHP 1.13+): subscribes with
+   *   `match=` / `match_urlpattern=` and sends the hub's cookie
+   *   (`withCredentials`), the token no longer travelling in the URL;
+   * - `"0.x"`: subscribes with `topic=` and URI Templates, as before.
+   */
+  mercureProtocol: MercureProtocol
 }
+
+export type MercureProtocol = "0.x" | "1.0"
 
 let config: ClientConfigInterface = {
   baseUrl: isBrowser() ? window.origin : "http://localhost",
   getAuthToken: () => undefined,
   getScope: () => undefined,
   mercurePath: "/.well-known/mercure",
+  mercureProtocol: "1.0",
 }
 
 export function getClientConfig(): ClientConfigInterface {
@@ -54,8 +67,6 @@ export function getClientConfig(): ClientConfigInterface {
  *   getScope: () => getCurrentScope(),
  * })
  */
-export function configureClient(
-  newConfig: Partial<ClientConfigInterface>
-): void {
+export function configureClient(newConfig: Partial<ClientConfigInterface>): void {
   config = { ...config, ...newConfig }
 }
