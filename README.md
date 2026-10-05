@@ -53,6 +53,9 @@ configureClient({
 
   // Path of the Mercure hub, appended to baseUrl.
   mercurePath: "/.well-known/mercure",
+
+  // Version of the Mercure protocol spoken by the hub: "1.0" (default) or "0.x".
+  mercureProtocol: "1.0",
 })
 ```
 
@@ -62,12 +65,12 @@ session is stored.
 
 ## What it does on every request
 
-| Situation | Header |
-| --- | --- |
-| A session is open | `Authorization: Bearer …` |
-| A scope is configured | `X-Scope: …` |
-| Any method except DELETE | `Content-Type: application/ld+json` |
-| PATCH | `Content-Type: application/merge-patch+json` |
+| Situation                | Header                                       |
+| ------------------------ | -------------------------------------------- |
+| A session is open        | `Authorization: Bearer …`                    |
+| A scope is configured    | `X-Scope: …`                                 |
+| Any method except DELETE | `Content-Type: application/ld+json`          |
+| PATCH                    | `Content-Type: application/merge-patch+json` |
 
 The PATCH case matters: API Platform rejects a merge patch sent as plain
 JSON-LD.
@@ -99,9 +102,48 @@ API. `buildTopic` turns a resource path into the topic the hub expects.
 import { buildTopic, useMercure } from "jsonld-api-client"
 
 function ArticleList() {
+  // Every article: https://api.example.com/api/articles/{id}
   const { data, isConnected } = useMercure(buildTopic("/api/articles"))
   // …
 }
+
+function Article({ iri }: { iri: string }) {
+  // One article: https://api.example.com/api/articles/42
+  const { data } = useMercure(buildTopic(iri, true))
+  // …
+}
+```
+
+`useMercure(topic, disabled)` subscribes only while `disabled` is `true` — the
+name is historical, it reads as "enabled". `onChange(handler)` reacts to each
+event without waiting for a render. For a subscription outside React,
+`clientMercure(topic)` returns the `EventSource` itself.
+
+### Mercure protocol
+
+The hub's protocol is chosen with `mercureProtocol`:
+
+|               | `"1.0"` (default)               | `"0.x"`         |
+| ------------- | ------------------------------- | --------------- |
+| Hub           | Mercure v1.0+, FrankenPHP 1.13+ | Mercure 0.x     |
+| Exact topic   | `?match=…`                      | `?topic=…`      |
+| Pattern       | `?match_urlpattern=…/:id`       | `?topic=…/{id}` |
+| `EventSource` | `withCredentials: true`         | default         |
+
+In 1.0, a topic holding `{id}` (what `buildTopic()` returns) or `/:id` is a
+pattern; its URI Template variables become URL Pattern groups. Any other topic
+is matched exactly.
+
+Mercure 1.0 no longer accepts the token in the URL: the browser presents it
+through the cookie set by the API (named `__Secure-mercure_access_token` by
+default, chosen server side). `withCredentials` sends it even when the hub is on
+another origin; the hub must then allow that origin in its CORS settings
+(`cors_origins`) — a wildcard is refused with credentials.
+
+To keep talking to a 0.x hub:
+
+```ts
+configureClient({ mercureProtocol: "0.x" })
 ```
 
 ## Errors
